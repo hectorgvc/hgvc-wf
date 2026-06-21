@@ -182,23 +182,29 @@ proyecto: mavelerp
       pese a estar documentado como activo — corregido ahora. Detalle en
       [[Bitacora/Sesiones/2026-06-20-dashboard-api-rest]].
 
-- [ ] **📱 Responsive / móvil de toda la plataforma** — Nunca trabajado.
-      Dashboard no encaja, tablas sin scroll-x, sidebar sin hamburger
-      funcional. Barrido completo: dashboard, listados, formularios, POS,
-      facturas/RI, sidebar en móvil. Usar `<style>` scopeado + media queries
-      (app.css es de www-data). **Última tarea del plan UI original.**
+- [x] **📱 Responsive / móvil de toda la plataforma** — ✅ Implementado
+      (fecha exacta pendiente de confirmar). Pendiente: hacer un barrido de
+      revisión para verificar que no quedó nada mal o que se pueda mejorar.
+      Dashboard, tablas, sidebar, POS, formularios, facturas/RI.
 
-- [ ] **Mejora seguridad: hashear tokens API en BD** — Capturado 2026-06-20. Tokens
-      almacenados en texto plano (entropía alta, acceso controlado). Mejora futura:
-      hashear con `password_hash()` + lookup por prefix (8 chars) + `hash_equals()`.
+- [x] **Botón de impresión lateral en factura (show.php)** — ✅ Corregido.
+      El panel lateral sticky y el botón del footer ya usan el mismo flujo.
+
+- [ ] **Mejora seguridad: hashear tokens API en BD** — Tokens almacenados
+      en texto plano (entropía alta, acceso controlado). Mejora futura:
+      hashear con `password_hash()` + lookup por prefix (8 chars) +
+      `hash_equals()`. Requiere rediseño de la tabla `api_tokens`.
+
+- [ ] **Scopes en tokens API** — Capturado 2026-06-21. Hoy todos los
+      tokens tienen acceso completo a los 4 endpoints (`/products`,
+      `/customers`, `/invoices`, `/payments`). Se necesita control por
+      scope (ej. `read:products`, `read:invoices`) para poder otorgar
+      acceso mínimo necesario a cada integración. Diseñar junto con el
+      punto de hasheo (afecta la misma tabla `api_tokens`).
 
 - [ ] **RateLimitMiddleware global** — Solo cableado en rutas `/api/v1/`.
       El resto del ERP (incluyendo `/login`) lo tiene en código pero nunca
       conectado a las rutas. Agendar hardening global.
-
-- [ ] **Botón lateral de factura (show.php)** — El botón de impresión
-      del panel lateral izquierdo (sticky) usa un flujo distinto al botón
-      del footer de la página. Verificar cuál es el correcto y unificar.
 
 ## Módulos futuros
 
