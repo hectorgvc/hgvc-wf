@@ -16,4 +16,6 @@ Thumbs.db
 
 # Proyectos: NO se publican en hgvc-wf (este repo es solo el framework de
 # trabajo). Las notas de cada proyecto viven localmente / en su propio repo.
-01-Proyectos/
+# Excepción: mavelerp se versiona aquí para historial y referencia.
+01-Proyectos/*
+!01-Proyectos/mavelerp
