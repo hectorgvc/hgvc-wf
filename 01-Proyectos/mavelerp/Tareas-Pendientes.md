@@ -66,12 +66,43 @@ proyecto: mavelerp
 - [ ] **Estilo del POS** — Mejora visual del POS una vez cerrado el
       flujo de pagos.
 
+## Branding / QA UI (sesión 2026-06-21)
+
+- [x] **Login dinámico: logo + tagline** — ✅ 2026-06-21. Vista de login
+      usa `sidebar_logo_path` como `<img>` (fallback al texto `app_name`).
+      Campo `app_tagline` nuevo y editable en Configuración (SUPER_ADMIN);
+      se muestra como subtítulo opcional. Migración 035: columna
+      `app_tagline VARCHAR(200)` en `settings`. Bug corregido: faltaba
+      la migración → "Error del Sistema" al guardar Settings.
+
+- [x] **Ítem activo del sidebar usa color de marca** — ✅ 2026-06-21.
+      `.nav-group-items a.active` ahora usa `var(--primary)` inyectado
+      en `<head>` (mismo patrón que Tarea 4.1). Ya responde al color
+      configurado en Settings.
+
+- [x] **Factura impresa: CANT. sin .00 + Forma de Pago ancho completo**
+      — ✅ 2026-06-21. `rtrim(rtrim(number_format(...,2),'0'),'.')` para
+      mostrar "1" en vez de "1.00". Bloque Forma de Pago con `flex:1`.
+      Aplicado en `print.php`, `print_simple.php`, `print_modern.php`.
+
+- [x] **Color secundario de marca configurable** — ✅ 2026-06-21.
+      Nueva columna `brand_color_secondary` (migración 033, default
+      `#64748b`). Variable CSS `--color-secondary` inyectada en `<head>`.
+      Color picker en Configuración con preview en tiempo real.
+      Aplicado en: badges e-CF en índice de facturas, badge "Desc.%"
+      en POS terminal.
+
+- [x] **Bloqueo de apertura de caja si sin cierre previo (POS)**
+      — ✅ 2026-06-21. Si existe sesión de caja abierta de un día
+      anterior, se bloquea la apertura y se registra en `caja_bloqueos`.
+      Desbloqueo mediante TOTP del SUPER_ADMIN. Vista de auditoría en
+      `/pos/register-locks`. Migración 034: `forced_close` en
+      `pos_cash_sessions` + tabla `caja_bloqueos`.
+
 ## API Rest global
 
-- [ ] **API Rest en todo el ERP** — Exponer endpoints REST consistentes
-      para los módulos clave (clientes, productos, facturas, cobros)
-      pensando en integraciones externas (CRM Plus, mobile, etc.).
-      Definir auth (token / OAuth), versionado y documentación.
+- [x] **API Rest en todo el ERP** — ✅ 2026-06-21. 7 endpoints REST
+      autenticados con Bearer token en `/api/v1/`. Ver sección Inventario.
 
 ## Integraciones
 
@@ -151,9 +182,23 @@ proyecto: mavelerp
       pese a estar documentado como activo — corregido ahora. Detalle en
       [[Bitacora/Sesiones/2026-06-20-dashboard-api-rest]].
 
+- [ ] **📱 Responsive / móvil de toda la plataforma** — Nunca trabajado.
+      Dashboard no encaja, tablas sin scroll-x, sidebar sin hamburger
+      funcional. Barrido completo: dashboard, listados, formularios, POS,
+      facturas/RI, sidebar en móvil. Usar `<style>` scopeado + media queries
+      (app.css es de www-data). **Última tarea del plan UI original.**
+
 - [ ] **Mejora seguridad: hashear tokens API en BD** — Capturado 2026-06-20. Tokens
       almacenados en texto plano (entropía alta, acceso controlado). Mejora futura:
       hashear con `password_hash()` + lookup por prefix (8 chars) + `hash_equals()`.
+
+- [ ] **RateLimitMiddleware global** — Solo cableado en rutas `/api/v1/`.
+      El resto del ERP (incluyendo `/login`) lo tiene en código pero nunca
+      conectado a las rutas. Agendar hardening global.
+
+- [ ] **Botón lateral de factura (show.php)** — El botón de impresión
+      del panel lateral izquierdo (sticky) usa un flujo distinto al botón
+      del footer de la página. Verificar cuál es el correcto y unificar.
 
 ## Módulos futuros
 
