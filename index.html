@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workflow Builder · Cerebro Secundario</title>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg-elevated: #12121a;
+    --bg-card: #1a1a25;
+    --border: #2a2a38;
+    --border-hover: #3a3a4a;
+    --text: #e8e8f0;
+    --text-dim: #9090a8;
+    --text-faint: #606078;
+    --accent: #7c3aed;
+    --accent-hover: #8b5cf6;
+    --accent-glow: rgba(124, 58, 237, 0.15);
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 100vh;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  /* === LEFT: Wizard === */
+  .wizard {
+    padding: 32px 40px;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    max-height: 100vh;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header-icon {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+  }
+  .header h1 { font-size: 20px; font-weight: 700; }
+  .header p { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+
+  /* Progress */
+  .progress {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 32px;
+  }
+  .progress-step {
+    flex: 1;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    transition: background 0.3s;
+  }
+  .progress-step.active { background: var(--accent); }
+  .progress-step.done { background: var(--success); }
+
+  /* Steps */
+  .step { display: none; animation: fadeIn 0.3s ease; }
+  .step.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .step-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 8px;
+  }
+  .step-number {
+    width: 28px; height: 28px;
+    background: var(--accent-glow);
+    color: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px;
+  }
+  .step-title { font-size: 22px; font-weight: 700; }
+  .step-desc { color: var(--text-dim); font-size: 14px; margin-bottom: 24px; }
+
+  /* Form elements */
+  .field { margin-bottom: 20px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+  .field .hint {
+    font-size: 12px;
+    color: var(--text-faint);
+    margin-bottom: 8px;
+  }
+  input[type="text"], textarea, select {
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    transition: border 0.2s;
+  }
+  input[type="text"]:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  textarea { resize: vertical; min-height: 80px; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+
+  /* Cards / Checkboxes */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  .card {
+    padding: 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .card:hover { border-color: var(--border-hover); }
+  .card.selected {
+    border-color: var(--accent);
+    background: var(--accent-glow);
+  }
+  .card.selected::after {
+    content: '';
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+  }
+  .card-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+  .card-desc { font-size: 12px; color: var(--text-dim); }
+
+  /* Chips (for tools/languages) */
+  .chip-group {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .chip {
+    padding: 6px 14px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .chip:hover { border-color: var(--border-hover); }
+  .chip.selected {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  /* Radio group */
+  .radio-group { display: flex; flex-direction: column; gap: 8px; }
+  .radio {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .radio:hover { border-color: var(--border-hover); }
+  .radio.selected { border-color: var(--accent); background: var(--accent-glow); }
+  .radio input { margin-top: 2px; accent-color: var(--accent); }
+  .radio-text strong { display: block; font-size: 14px; margin-bottom: 2px; }
+  .radio-text span { font-size: 12px; color: var(--text-dim); }
+
+  /* Nav buttons */
+  .nav {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+  button {
+    padding: 10px 20px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  button:hover { border-color: var(--border-hover); background: var(--bg-card); }
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+  button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* === RIGHT: Preview === */
+  .preview {
+    padding: 32px 40px;
+    overflow-y: auto;
+    max-height: 100vh;
+    background: var(--bg-elevated);
+  }
+  .preview-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .preview-title {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 600; font-size: 14px;
+    color: var(--text-dim);
+  }
+  .tabs {
+    display: flex; gap: 4px;
+    background: var(--bg);
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .tab {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-dim);
+    transition: all 0.2s;
+  }
+  .tab.active { background: var(--accent); color: white; }
+
+  .preview-content {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    min-height: 500px;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  .preview-content.hidden { display: none; }
+
+  .file-tree {
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .file-tree .folder { color: var(--accent); font-weight: 600; margin-top: 8px; }
+  .file-tree .file { padding-left: 20px; }
+
+  /* Action buttons at bottom of preview */
+  .actions {
+    display: flex; gap: 8px;
+    margin-top: 16px;
+  }
+  .actions button { flex: 1; justify-content: center; }
+  .copy-feedback {
+    position: fixed;
+    top: 20px; right: 20px;
+    background: var(--success);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 1000;
+  }
+  .copy-feedback.show { opacity: 1; }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .app { grid-template-columns: 1fr; }
+    .wizard, .preview { max-height: none; }
+    .preview { border-top: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- LEFT: Wizard -->
+  <div class="wizard">
+    <div class="header">
+      <div class="header-icon"><i data-lucide="brain-circuit"></i></div>
+      <div>
+        <h1>Workflow Builder</h1>
+        <p>Configurá tu cerebro secundario en 6 pasos</p>
+      </div>
+    </div>
+
+    <div class="progress">
+      <div class="progress-step active" data-step="1"></div>
+      <div class="progress-step" data-step="2"></div>
+      <div class="progress-step" data-step="3"></div>
+      <div class="progress-step" data-step="4"></div>
+      <div class="progress-step" data-step="5"></div>
+      <div class="progress-step" data-step="6"></div>
+    </div>
+
+    <form id="wizardForm">
+
+      <!-- STEP 1: Identity -->
+      <div class="step active" data-step="1">
+        <div class="step-header">
+          <div class="step-number">1</div>
+          <div class="step-title">Identidad</div>
+        </div>
+        <p class="step-desc">¿Quién sos y cómo te gusta trabajar con Claude?</p>
+
+        <div class="field">
+          <label>Tu nombre</label>
+          <div class="hint">Cómo querés que Claude te llame en las sesiones</div>
+          <input type="text" name="userName" placeholder="ej: Hector, María, etc.">
+        </div>
+
+        <div class="field">
+          <label>Idioma de preferencia</label>
+          <div class="radio-group" data-name="language">
+            <label class="radio selected">
+              <input type="radio" name="language" value="es" checked>
+              <div class="radio-text"><strong>Español</strong><span>Todas las respuestas en español</span></div>
+            </label>
+            <label class="radio">
+              <input type="radio" name="language" value="en">
+              <div class="radio-text"><strong>Inglés</strong><span>Todas las respuestas en inglés</span></div>
+            </label>
+            <label class="radio">
+              <input type="radio" name="language" value="mix">
+              <div class="radio-text"><strong>Mixto</strong><span>Español conversacional + términos técnicos en inglés</span></div>
+            </label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Estilo de comunicación</label>
+          <div class="radio-group" data-name="tone">
+            <label class="radio selected">
+              <input type="radio" name="tone" value="concise" checked>
+              <div class="radio-text"><strong>Conciso</strong><span>Directo al grano, sin floritura</span></div>
+            </label>
+            <label class="radio">
+              <input type="radio" name="tone" value="detailed">
+              <div class="radio-text"><strong>Detallado</strong><span>Explicaciones profundas, justificaciones</span></div>
+            </label>
+            <label class="radio">
+              <input type="radio" name="tone" value="socratic">
+              <div class="radio-text"><strong>Socrático</strong><span>Preguntas antes de responder, me hace pensar</span></div>
+            </label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Tu nivel técnico</label>
+          <div class="radio-group" data-name="level">
+            <label class="radio">
+              <input type="radio" name="level" value="junior">
+              <div class="radio-text"><strong>Junior</strong><span>Explicame conceptos, mostrame ejemplos</span></div>
+            </label>
+            <label class="radio selected">
+              <input type="radio" name="level" value="mid" checked>
+              <div class="radio-text"><strong>Mid</strong><span>Asumí conocimiento básico, foco en decisiones</span></div>
+            </label>
+            <label class="radio">
+              <input type="radio" name="level" value="senior">
+              <div class="radio-text"><strong>Senior</strong><span>Habame de igual a igual, saltá las obviedades</span></div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: Project -->
+      <div class="step" data-step="2">
+        <div class="step-header">
+          <div class="step-number">2</div>
+          <div class="step-title">Proyecto inicial</div>
+        </div>
+        <p class="step-desc">Con qué proyecto vas a arrancar (podés agregar más después)</p>
+
+        <div class="field">
+          <label>Nombre del proyecto</label>
+          <div class="hint">Un nombre corto, kebab-case. ej: helpdesk-promesecal</div>
+          <input type="text" name="projectName" placeholder="ej: mi-app-web">
+        </div>
+
+        <div class="field">
+          <label>Descripción de una línea</label>
+          <input type="text" name="projectDesc" placeholder="ej: Sistema de mesa de ayuda con IA local">
+        </div>
+
+        <div class="field">
+          <label>Tipo de proyecto</label>
+          <div class="chip-group" data-name="projectType" data-multi="true">
+            <div class="chip selected" data-value="web-app">Web App</div>
+            <div class="chip" data-value="api">API / Backend</div>
+            <div class="chip" data-value="mobile">Mobile</div>
+            <div class="chip" data-value="cli">CLI / Script</div>
+            <div class="chip" data-value="infra">Infra / DevOps</div>
+            <div class="chip" data-value="data">Data / ML</div>
+            <div class="chip" data-value="desktop">Desktop</div>
+            <div class="chip" data-value="library">Library / SDK</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Stack principal</label>
+          <div class="hint">Tocá las que apliquen. Si no ves una, agregala abajo.</div>
+          <div class="chip-group" data-name="stack" data-multi="true">
+            <div class="chip" data-value="Python">Python</div>
+            <div class="chip" data-value="JavaScript">JavaScript</div>
+            <div class="chip" data-value="TypeScript">TypeScript</div>
+            <div class="chip" data-value="Node.js">Node.js</div>
+            <div class="chip" data-value="React">React</div>
+            <div class="chip" data-value="Next.js">Next.js</div>
+            <div class="chip" data-value="Vue">Vue</div>
+            <div class="chip" data-value="FastAPI">FastAPI</div>
+            <div class="chip" data-value="Django">Django</div>
+            <div class="chip" data-value="Go">Go</div>
+            <div class="chip" data-value="Rust">Rust</div>
+            <div class="chip" data-value="PostgreSQL">PostgreSQL</div>
+            <div class="chip" data-value="MongoDB">MongoDB</div>
+            <div class="chip" data-value="Docker">Docker</div>
+            <div class="chip" data-value="Kubernetes">Kubernetes</div>
+          </div>
+          <input type="text" name="stackCustom" placeholder="Otros (separados por coma)" style="margin-top: 10px;">
+        </div>
+
+        <div class="field">
+          <label>Fase actual del proyecto</label>
+          <div class="radio-group" data-name="phase">
+            <label class="radio">
+              <input type="radio" name="phase" value="idea">
+              <div class="radio-text"><strong>Idea / brainstorming</strong><span>Todavía estamos diseñando</span></div>
+            </label>
+            <label class="radio selected">
+              <input type="radio" name="phase" value="mvp" checked>
+              <div class="radio-text"><strong>MVP / primera versión</strong><span>Construyendo desde cero</span></div>
+            </label>
+            <label class="radio">
+              <input type="radio" name="phase" value="production">
+              <div class="radio-text"><strong>En producción</strong><span>Iterando, manteniendo, escalando</span></div>
+            </label>
+            <label class="radio">
+              <input type="radio" name="phase" value="legacy">
+              <div class="radio-text"><strong>Legacy / migración</strong><span>Refactorizando código viejo</span></div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: Skills -->
+      <div class="step" data-step="3">
+        <div class="step-header">
+          <div class="step-number">3</div>
+          <div class="step-title">Skills</div>
+        </div>
+        <p class="step-desc">Qué skills querés que estén disponibles desde el día 1</p>
+
+        <div class="field">
+          <label>Seleccioná las skills que necesitás</label>
+          <div class="card-grid">
+            <div class="card selected" data-skill="fase">
+              <div class="card-title"><i data-lucide="layers"></i> fase</div>
+              <div class="card-desc">Recomienda modelo (Sonnet/Opus) según la tarea</div>
+            </div>
+            <div class="card selected" data-skill="lucide">
+              <div class="card-title"><i data-lucide="palette"></i> lucide</div>
+              <div class="card-desc">Iconos Lucide, nunca emojis</div>
+            </div>
+            <div class="card selected" data-skill="hilo">
+              <div class="card-title"><i data-lucide="message-square"></i> hilo</div>
+              <div class="card-desc">Evalúa si conviene cerrar el hilo actual</div>
+            </div>
+            <div class="card selected" data-skill="vengadores">
+              <div class="card-title"><i data-lucide="users"></i> vengadores</div>
+              <div class="card-desc">Orquesta el equipo de sub-agentes</div>
+            </div>
+            <div class="card selected" data-skill="reporte-proyecto">
+              <div class="card-title"><i data-lucide="file-text"></i> reporte-proyecto</div>
+              <div class="card-desc">Sintetiza un proyecto en reporte final</div>
+            </div>
+            <div class="card" data-skill="brainstorming">
+              <div class="card-title"><i data-lucide="lightbulb"></i> brainstorming</div>
+              <div class="card-desc">Idea → diseño socrático</div>
+            </div>
+            <div class="card" data-skill="depuracion-sistematica">
+              <div class="card-title"><i data-lucide="bug"></i> depuración</div>
+              <div class="card-desc">Debug por causa raíz (4 fases)</div>
+            </div>
+            <div class="card" data-skill="tdd">
+              <div class="card-title"><i data-lucide="test-tube"></i> tdd</div>
+              <div class="card-desc">Ciclo RED-GREEN-REFACTOR</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4: Agents -->
+      <div class="step" data-step="4">
+        <div class="step-header">
+          <div class="step-number">4</div>
+          <div class="step-title">Equipo de agentes</div>
+        </div>
+        <p class="step-desc">Qué sub-agentes querés en tu equipo "Vengadores"</p>
+
+        <div class="field">
+          <label>¿Qué agentes incluir?</label>
+          <div class="card-grid">
+            <div class="card selected" data-agent="dev-senior">
+              <div class="card-title"><i data-lucide="code"></i> dev-senior</div>
+              <div class="card-desc">Implementa features y repara bugs</div>
+            </div>
+            <div class="card selected" data-agent="ui-ux-designer">
+              <div class="card-title"><i data-lucide="figma"></i> ui-ux-designer</div>
+              <div class="card-desc">Front-end, usa Lucide</div>
+            </div>
+            <div class="card selected" data-agent="qa-bug-hunter">
+              <div class="card-title"><i data-lucide="search"></i> qa-bug-hunter</div>
+              <div class="card-desc">Caza y reporta bugs (no repara)</div>
+            </div>
+            <div class="card selected" data-agent="security-analyst">
+              <div class="card-title"><i data-lucide="shield"></i> security-analyst</div>
+              <div class="card-desc">Audita y corrige vulnerabilidades</div>
+            </div>
+            <div class="card selected" data-agent="dba">
+              <div class="card-title"><i data-lucide="database"></i> dba</div>
+              <div class="card-desc">SQL, esquema, migraciones</div>
+            </div>
+            <div class="card selected" data-agent="documentalista">
+              <div class="card-title"><i data-lucide="book-open"></i> documentalista</div>
+              <div class="card-desc">Registra misiones en el vault</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>¿Querés agregar agentes custom?</label>
+          <div class="hint">Formato: nombre — descripción corta (una por línea)</div>
+          <textarea name="customAgents" placeholder="ej:
+mobile-dev — Implementa features nativas iOS/Android
+data-engineer — Pipelines ETL y warehousing"></textarea>
+        </div>
+      </div>
+
+      <!-- STEP 5: Workflow style -->
+      <div class="step" data-step="5">
+        <div class="step-header">
+          <div class="step-number">5</div>
+          <div class="step-title">Estilo de flujo</div>
+        </div>
+        <p class="step-desc">Cómo querés que Claude se comporte en cada sesión</p>
+
+        <div class="field">
+          <label>Antes de implementar código nuevo</label>
+          <div class="radio-group" data-name="planFirst">
+            <label class="radio selected">
+              <input type="radio" name="planFirst" value="always" checked>
+              <div class="radio-text"><strong>Siempre mostrar plan primero</strong><span>Claude propone, yo apruebo, recién después codifica</span></div>
+            </label>
+            <label class="radio">
+              <input type="radio" name="planFirst" value="sometimes">
+              <div class="radio-text"><strong>Solo para tareas grandes</strong><span>Bug fixes simples van directo</span></div>
+            </label>
+            <label class="radio">
+              <input type="radio" name="planFirst" value="never">
+              <div class="radio-text"><strong>Nunca</strong><span>Ejecutá directo, ya me dirás si me equivoco</span></div>
+            </label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Registro de sesiones</label>
+          <div class="radio-group" data-name="sessionLog">
+            <label class="radio selected">
+              <input type="radio" name="sessionLog" value="always" checked>
+              <div class="radio-text"><strong>Bitácora completa</strong><span>Una nota por sesión con decisiones y aprendizajes</span></div>
+            </label>
+            <label class="radio">
+              <input type="radio" name="sessionLog" value="important">
+              <div class="radio-text"><strong>Solo sesiones importantes</strong><span>Cuando hay decisiones, bugs o milestones</span></div>
+            </label>
+            <label class="radio">
+              <input type="radio" name="sessionLog" value="never">
+              <div class="radio-text"><strong>No registrar</strong><span>Prefiero conversar sin burocracia</span></div>
+            </label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Manejo de secretos y archivos sensibles</label>
+          <div class="radio-group" data-name="secrets">
+            <label class="radio selected">
+              <input type="radio" name="secrets" value="paranoid" checked>
+              <div class="radio-text"><strong>Paranoico</strong><span>Nunca leer/escribir .env, .key, credentials. Preguntar antes.</span></div>
+            </label>
+            <label class="radio">
+              <input type="radio" name="secrets" value="careful">
+              <div class="radio-text"><strong>Cuidadoso</strong><span>Avisar si toca un archivo sensible, pero no bloquear</span></div>
+            </label>
+            <label class="radio">
+              <input type="radio" name="secrets" value="trust">
+              <div class="radio-text"><strong>Confío</strong><span>Es mi máquina, hacé lo que necesites</span></div>
+            </label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Idioma de commits y documentación técnica</label>
+          <div class="radio-group" data-name="commitLang">
+            <label class="radio">
+              <input type="radio" name="commitLang" value="en">
+              <div class="radio-text"><strong>Inglés</strong><span>Conventional commits en inglés</span></div>
+            </label>
+            <label class="radio selected">
+              <input type="radio" name="commitLang" value="es" checked>
+              <div class="radio-text"><strong>Español</strong><span>Commits en español</span></div>
+            </label>
+            <label class="radio">
+              <input type="radio" name="commitLang" value="both">
+              <div class="radio-text"><strong>Mixto</strong><span>Conventional commits estándar en inglés</span></div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 6: Output -->
+      <div class="step" data-step="6">
+        <div class="step-header">
+          <div class="step-number">6</div>
+          <div class="step-title">Listo para generar</div>
+        </div>
+        <p class="step-desc">Revisá el preview a la derecha y generá tu prompt personalizado</p>
+
+        <div class="field">
+          <label>Resumen de tu configuración</label>
+          <div id="summary" style="background: var(--bg-card); padding: 16px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; line-height: 1.8;"></div>
+        </div>
+
+        <div class="field">
+          <label>Notas adicionales (opcional)</label>
+          <div class="hint">Cualquier cosa que Claude deba saber sobre tu flujo. ej: "Uso Git Flow", "Hago code review propio antes de mergear", etc.</div>
+          <textarea name="extraNotes" placeholder="ej: Trabajo en Mac y Linux. Uso VSCode. Prefiero Jest sobre Vitest..."></textarea>
+        </div>
+      </div>
+
+      <!-- Nav -->
+      <div class="nav">
+        <button type="button" id="prevBtn" disabled>
+          <i data-lucide="arrow-left"></i> Anterior
+        </button>
+        <button type="button" id="nextBtn" class="primary">
+          Siguiente <i data-lucide="arrow-right"></i>
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+  <!-- RIGHT: Preview -->
+  <div class="preview">
+    <div class="preview-header">
+      <div class="preview-title">
+        <i data-lucide="eye"></i> Vista previa en vivo
+      </div>
+      <div class="tabs">
+        <div class="tab active" data-tab="prompt">Prompt</div>
+        <div class="tab" data-tab="files">Archivos</div>
+        <div class="tab" data-tab="setup">Setup</div>
+      </div>
+    </div>
+
+    <div class="preview-content" id="promptPreview"></div>
+
+    <div class="preview-content hidden" id="filesPreview">
+      <div class="file-tree">
+<div class="folder">~/ObsidianVault/</div>
+<div class="file">├── 00-RECONSTRUIR.md</div>
+<div class="file">├── 00-Reglas-Globales/CLAUDE-global.md <span style="color:var(--success)">(personalizado)</span></div>
+<div class="file">├── 01-Proyectos/<span id="ftProjectName">mi-proyecto</span>/</div>
+<div class="file">│   ├── 00-Proyecto.md <span style="color:var(--success)">(generado)</span></div>
+<div class="file">│   └── CLAUDE.md <span style="color:var(--success)">(generado)</span></div>
+<div class="file">├── 03-Skills/<span id="ftSkills">[...]</span></div>
+<div class="file">└── 04-Agentes/<span id="ftAgents">[...]</span></div>
+<div class="file">&nbsp;</div>
+<div class="file" style="color: var(--accent);">→ Se generarán con `usar-skill.sh` y `usar-agente.sh`</div>
+      </div>
+    </div>
+
+    <div class="preview-content hidden" id="setupPreview">
+<strong>Setup en 3 pasos:</strong>
+
+<strong>1. Crear el vault:</strong>
+   git clone https://github.com/hgvc-publish/wf-template.git ~/ObsidianVault
+   cd ~/ObsidianVault
+   chmod +x usar-skill.sh usar-agente.sh
+
+<strong>2. Cablear las reglas globales en ~/.claude/CLAUDE.md:</strong>
+   @import(/home/$USER/ObsidianVault/00-Reglas-Globales/CLAUDE-global.md)
+
+<strong>3. Activar las skills y agentes seleccionados:</strong>
+   ./usar-skill.sh <reporte> --global
+   ./usar-agente.sh <dev-senior> --global
+   ...
+
+<strong>Verificación:</strong> abrí Claude Code y probá /fase, /lucide, /vengadores.
+
+<strong>Backup:</strong> el vault es un repo git → hacé push a un remoto privado
+para nunca perder la estructura.
+    </div>
+
+    <div class="actions">
+      <button type="button" id="copyBtn">
+        <i data-lucide="copy"></i> Copiar prompt
+      </button>
+      <button type="button" id="downloadBtn" class="primary">
+        <i data-lucide="download"></i> Descargar ZIP
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="copy-feedback" id="copyFeedback">✓ Copiado al portapapeles</div>
+
+<script>
+// === State ===
+let currentStep = 1;
+const totalSteps = 6;
+const state = {
+  skills: new Set(['fase', 'lucide', 'hilo', 'vengadores', 'reporte-proyecto']),
+  agents: new Set(['dev-senior', 'ui-ux-designer', 'qa-bug-hunter', 'security-analyst', 'dba', 'documentalista']),
+  stack: new Set(),
+  projectType: new Set(['web-app']),
+};
+
+// === Wizard Navigation ===
+function showStep(n) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.querySelector(`.step[data-step="${n}"]`).classList.add('active');
+  document.querySelectorAll('.progress-step').forEach((p, i) => {
+    p.classList.remove('active', 'done');
+    if (i + 1 < n) p.classList.add('done');
+    if (i + 1 === n) p.classList.add('active');
+  });
+  document.getElementById('prevBtn').disabled = n === 1;
+  document.getElementById('nextBtn').innerHTML = n === totalSteps
+    ? '<i data-lucide="check"></i> Finalizar'
+    : 'Siguiente <i data-lucide="arrow-right"></i>';
+  document.getElementById('nextBtn').onclick = n === totalSteps ? finish : next;
+  lucide.createIcons();
+  if (n === totalSteps) renderSummary();
+}
+
+function next() { if (currentStep < totalSteps) { currentStep++; showStep(currentStep); renderPreview(); } }
+function prev() { if (currentStep > 1) { currentStep--; showStep(currentStep); } }
+
+document.getElementById('prevBtn').onclick = prev;
+document.getElementById('nextBtn').onclick = next;
+
+// === Card / Chip selection ===
+document.querySelectorAll('.card').forEach(card => {
+  card.onclick = () => {
+    card.classList.toggle('selected');
+    const skill = card.dataset.skill;
+    const agent = card.dataset.agent;
+    if (skill) state.skills[card.classList.contains('selected') ? 'add' : 'delete'](skill);
+    if (agent) state.agents[card.classList.contains('selected') ? 'add' : 'delete'](agent);
+    renderPreview();
+  };
+});
+
+document.querySelectorAll('.chip-group').forEach(group => {
+  const name = group.dataset.name;
+  const multi = group.dataset.multi === 'true';
+  group.querySelectorAll('.chip').forEach(chip => {
+    chip.onclick = () => {
+      if (multi) {
+        chip.classList.toggle('selected');
+        if (chip.classList.contains('selected')) state[name].add(chip.dataset.value);
+        else state[name].delete(chip.dataset.value);
+      } else {
+        group.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+        chip.classList.add('selected');
+        state[name] = chip.dataset.value;
+      }
+      renderPreview();
+    };
+  });
+});
+
+// Radio card visual sync
+document.querySelectorAll('.radio').forEach(radio => {
+  const input = radio.querySelector('input');
+  radio.onclick = (e) => {
+    if (e.target.tagName !== 'INPUT') input.checked = true;
+    radio.parentElement.querySelectorAll('.radio').forEach(r => r.classList.remove('selected'));
+    radio.classList.add('selected');
+    renderPreview();
+  };
+});
+
+// Text inputs
+document.querySelectorAll('input[type="text"], textarea').forEach(el => {
+  el.oninput = renderPreview;
+});
+
+// === Generation ===
+function getFormData() {
+  const data = {};
+  document.querySelectorAll('input[type="text"], textarea').forEach(el => {
+    if (el.name) data[el.name] = el.value.trim();
+  });
+  document.querySelectorAll('input[type="radio"]:checked').forEach(el => {
+    data[el.name] = el.value;
+  });
+  data.skills = [...state.skills];
+  data.agents = [...state.agents];
+  data.stack = [...state.stack];
+  data.projectType = [...state.projectType];
+  return data;
+}
+
+function generatePrompt(data) {
+  const langMap = { es: 'español', en: 'inglés', mix: 'español con términos técnicos en inglés' };
+  const toneMap = {
+    concise: 'conciso y directo',
+    detailed: 'detallado con justificaciones',
+    socratic: 'socrático, haciendo preguntas antes de responder'
+  };
+  const levelMap = { junior: 'explicame conceptos', mid: 'asumí conocimiento intermedio', senior: 'hablame de igual a igual' };
+  const planMap = { always: 'siempre', sometimes: 'en tareas grandes', never: 'nunca' };
+  const logMap = { always: 'bitácora completa', important: 'solo sesiones importantes', never: 'no registrar' };
+  const secretsMap = { paranoid: 'nunca toques .env, .key, credentials', careful: 'avisá si tocás archivos sensibles', trust: 'confío en vos' };
+  const commitLangMap = { es: 'español', en: 'inglés', both: 'conventional commits en inglés' };
+  const phaseMap = { idea: 'idea/brainstorming', mvp: 'MVP', production: 'producción', legacy: 'legacy/migración' };
+
+  const customStack = data.stackCustom ? data.stackCustom.split(',').map(s => s.trim()).filter(Boolean) : [];
+  const allStack = [...data.stack, ...customStack];
+
+  const customAgents = data.customAgents
+    ? data.customAgents.split('\n').filter(Boolean).map(line => {
+        const [name, desc] = line.split('—').map(s => s.trim());
+        return { name, desc: desc || '' };
+      })
+    : [];
+
+  return `# Contexto del flujo de trabajo
+
+Soy **${data.userName || '[nombre]'}**, trabajo en modo:
+- **Idioma:** ${langMap[data.language] || 'español'}
+- **Estilo:** ${toneMap[data.tone] || 'conciso'}
+- **Nivel:** ${levelMap[data.level] || 'mid'}
+- **Plan primero:** ${planMap[data.planFirst] || 'siempre'}
+- **Bitácora:** ${logMap[data.sessionLog] || 'importantes'}
+- **Secretos:** ${secretsMap[data.secrets] || 'paranoid'}
+- **Commits:** ${commitLangMap[data.commitLang] || 'español'}
+
+---
+
+# Proyecto activo: ${data.projectName || '[nombre-proyecto]'}
+
+${data.projectDesc || '[descripción corta]'}
+
+**Tipo:** ${data.projectType.join(', ')}
+**Stack:** ${allStack.length ? allStack.join(', ') : '[a definir]'}
+**Fase actual:** ${phaseMap[data.phase] || 'MVP'}
+
+${data.extraNotes ? `## Notas adicionales\n${data.extraNotes}` : ''}
+
+---
+
+# Reglas globales (no negociables)
+
+1. **Plan primero**: antes de tocar código, mostrá el plan y esperá mi OK (excepto bug fixes triviales si así lo configuré).
+2. **Lucide siempre**: iconos Lucide, NUNCA emojis, FontAwesome, ni heroicons.
+3. **Vault = fuente de verdad**: toda la documentación, decisiones, bitácoras y reportes viven en el vault Obsidian. El código vive en su repo.
+4. **Symlinks para skills/agentes**: skills y agentes se activan con scripts (symlink a ~/.claude/). Nunca se duplican.
+5. **Wiring de reglas**: ~/.claude/CLAUDE.md debe tener el @import a 00-Reglas-Globales/CLAUDE-global.md.
+6. **Bitácora por sesión**: una nota por sesión en Bitacora/Sesiones/YYYY-MM-DD-tema.md (o solo en importantes).
+7. **Decisiones como ADR**: cualquier decisión técnica importante va a Decisiones/NNN-titulo.md con contexto, decisión, consecuencias.
+
+---
+
+# Skills activadas (${data.skills.length})
+
+${data.skills.map(s => `- \`${s}\` — ${SKILL_DESCS[s] || s}`).join('\n')}
+
+**Cómo se invocan:** tipear \`/${data.skills[0] || 'skill'}\` en Claude Code. Cada una corre en la sesión principal.
+
+---
+
+# Agentes disponibles (${data.agents.length + customAgents.length})
+
+**Equipo "Vengadores":**
+${data.agents.map(a => `- \`${a}\` — ${AGENT_DESCS[a] || a}`).join('\n')}
+${customAgents.length ? `\n**Custom:**\n${customAgents.map(a => `- \`${a.name}\` — ${a.desc}`).join('\n')}` : ''}
+
+**Cómo se invocan:** la skill \`vengadores\` orquesta los necesarios para cada misión (no siempre los 6).
+
+---
+
+# Primera tarea sugerida
+
+Antes de empezar a codear, ejecutá en orden:
+
+1. \`/fase\` — para que recomiendes modelo según lo que viene
+2. Mostrame el plan de batalla para arrancar el proyecto "${data.projectName}"
+3. Esperá mi OK
+4. Recién ahí empezamos a generar la estructura inicial del proyecto
+
+${data.phase === 'idea' ? '\n💡 Como estamos en fase idea, primero corré `/brainstorming` para validar el approach.' : ''}
+${data.phase === 'legacy' ? '\n🔧 Como es legacy, primero corré `/depuracion-sistematica` para entender qué hay antes de tocar.' : ''}
+
+---
+
+# Recordatorio final
+
+Antes de cerrar esta sesión:
+- Guardá esta conversación en \`~/ObsidianVault/01-Proyectos/${data.projectName || 'mi-proyecto'}/Bitacora/Sesiones/\` con la fecha de hoy.
+- Si hubo decisiones técnicas importantes, creá el ADR correspondiente.
+
+¡Listo, arrancamos!`;
+}
+
+const SKILL_DESCS = {
+  'fase': 'Recomienda modelo (Sonnet/Opus) según tarea',
+  'lucide': 'Iconos Lucide, nunca emojis',
+  'hilo': 'Evalúa si conviene cerrar el hilo actual',
+  'vengadores': 'Orquesta el equipo de sub-agentes',
+  'reporte-proyecto': 'Sintetiza un proyecto en reporte final',
+  'brainstorming': 'Idea → diseño socrático',
+  'depuracion-sistematica': 'Debug por causa raíz (4 fases)',
+  'tdd': 'Ciclo RED-GREEN-REFACTOR'
+};
+
+const AGENT_DESCS = {
+  'dev-senior': 'Implementa features y repara bugs (Opus)',
+  'ui-ux-designer': 'Front-end HTML/CSS/JS, usa Lucide (Sonnet)',
+  'qa-bug-hunter': 'Caza y reporta bugs, no repara (Sonnet)',
+  'security-analyst': 'Audita y corrige vulnerabilidades (Opus)',
+  'dba': 'SQL, esquema, migraciones (Sonnet)',
+  'documentalista': 'Registra misiones en el vault (Haiku)'
+};
+
+// === Preview ===
+function renderPreview() {
+  const data = getFormData();
+  document.getElementById('promptPreview').textContent = generatePrompt(data);
+  if (data.projectName) document.getElementById('ftProjectName').textContent = data.projectName;
+  document.getElementById('ftSkills').textContent = data.skills.length + ' activadas';
+  document.getElementById('ftAgents').textContent = data.agents.length + ' agentes';
+  lucide.createIcons();
+}
+
+function renderSummary() {
+  const data = getFormData();
+  const html = `
+    <strong>👤 Identidad:</strong> ${data.userName || '(sin nombre)'} · ${data.language} · ${data.tone} · nivel ${data.level}<br>
+    <strong>📦 Proyecto:</strong> ${data.projectName || '(sin nombre)'} — ${data.projectDesc || 'sin descripción'}<br>
+    <strong>🛠 Stack:</strong> ${data.stack.join(', ') || 'a definir'}<br>
+    <strong>📅 Fase:</strong> ${data.phase}<br>
+    <strong>🎯 Skills:</strong> ${data.skills.join(', ')}<br>
+    <strong>👥 Agentes:</strong> ${data.agents.join(', ')}<br>
+    <strong>⚙️ Flujo:</strong> plan-${data.planFirst} · log-${data.sessionLog} · secrets-${data.secrets} · commits-${data.commitLang}
+  `;
+  document.getElementById('summary').innerHTML = html;
+}
+
+// === Tabs ===
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.preview-content').forEach(c => c.classList.add('hidden'));
+    const target = tab.dataset.tab;
+    document.getElementById(target + 'Preview').classList.remove('hidden');
+    lucide.createIcons();
+  };
+});
+
+// === Copy ===
+document.getElementById('copyBtn').onclick = async () => {
+  const text = document.getElementById('promptPreview').textContent;
+  await navigator.clipboard.writeText(text);
+  const fb = document.getElementById('copyFeedback');
+  fb.classList.add('show');
+  setTimeout(() => fb.classList.remove('show'), 2000);
+};
+
+// === Download ZIP ===
+document.getElementById('downloadBtn').onclick = () => {
+  const data = getFormData();
+  const claudeGlobal = generateClaudeGlobal(data);
+  const projectFile = generateProjectFile(data);
+  const projectClaude = generateProjectClaude(data);
+  const workflowPrompt = generatePrompt(data);
+
+  // Build a tar-like structure (since we can't easily zip without a lib, we provide a multi-file download approach)
+  // For simplicity, we'll trigger downloads of individual files
+  downloadFile(`${data.projectName || 'mi-proyecto'}-PROMPT.md`, workflowPrompt);
+  setTimeout(() => downloadFile('CLAUDE-global.md', claudeGlobal), 200);
+  setTimeout(() => downloadFile('00-Proyecto.md', projectFile), 400);
+  setTimeout(() => downloadFile('CLAUDE.md', projectClaude), 600);
+};
+
+function downloadFile(name, content) {
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function generateClaudeGlobal(data) {
+  return `---
+titulo: Reglas globales del workflow
+actualizado: ${new Date().toISOString().split('T')[0]}
+tags: [meta, reglas, globales]
+---
+
+# Cómo me comunica Claude
+
+- **Idioma:** ${data.language === 'es' ? 'español' : data.language === 'en' ? 'inglés' : 'español con términos técnicos en inglés'}
+- **Estilo:** ${data.tone}
+- **Nivel:** ${data.level}
+
+# Reglas no negociables
+
+1. **Plan primero** (${data.planFirst}): antes de codear, mostrá el plan.
+2. **Lucide**: iconos Lucide, NUNCA emojis.
+3. **Vault = fuente de verdad**: docs, decisiones, bitácoras viven en el vault.
+4. **Symlinks**: skills/agentes se activan con scripts, no se duplican.
+5. **Bitácora por sesión** (${data.sessionLog}).
+6. **Decisiones como ADR**.
+7. **Secretos** (${data.secrets}): ${data.secrets === 'paranoid' ? 'nunca toques archivos sensibles' : 'con cuidado'}.
+
+# Stack del usuario
+
+${data.stack.join(', ') || '(a definir)'}
+
+# Skills y agentes activos
+
+Ver 03-Skills/README.md y 04-Agentes/README.md.
+`;
+}
+
+function generateProjectFile(data) {
+  return `---
+titulo: ${data.projectName || 'Mi Proyecto'}
+actualizado: ${new Date().toISOString().split('T')[0]}
+tags: [proyecto, ${data.projectType.join(', ')}]
+---
+
+# ${data.projectName || 'Mi Proyecto'}
+
+> ${data.projectDesc || 'Descripción del proyecto'}
+
+## Estado
+
+- **Fase:** ${data.phase}
+- **Stack:** ${data.stack.join(', ') || 'a definir'}
+
+## Tipo
+
+${data.projectType.map(t => `- ${t}`).join('\n')}
+
+## Hitos
+
+- [ ] M01 — Setup inicial
+- [ ] M02 — MVP funcional
+
+## Bitácora
+
+Ver \`Bitacora/Sesiones/\`
+
+## Decisiones
+
+Ver \`Decisiones/\`
+`;
+}
+
+function generateProjectClaude(data) {
+  return `# ${data.projectName || 'Mi Proyecto'}
+
+@import(/home/$USER/ObsidianVault/00-Reglas-Globales/CLAUDE-global.md)
+
+## Skills disponibles
+${data.skills.map(s => `- /${s}`).join('\n')}
+
+## Equipo de agentes
+${data.agents.map(a => `- ${a}`).join('\n')}
+`;
+}
+
+// === Init ===
+showStep(1);
+renderPreview();
+lucide.createIcons();
+</script>
+</body>
+</html>

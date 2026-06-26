@@ -1,0 +1,21 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Obsidian: ignorar solo cache/UI, NO las notas
+.obsidian/workspace*
+.obsidian/cache
+.trash/
+
+# Temporal
+*.tmp
+*.bak
+
+# Proyectos: NO se publican en hgvc-wf (este repo es solo el framework de
+# trabajo). Las notas de cada proyecto viven localmente / en su propio repo.
+# Excepción: mavelerp se versiona aquí para historial y referencia.
+01-Proyectos/*
+!01-Proyectos/mavelerp
